@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RPS Quick Sin — Habla en Ruido</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #1a1a2e; font-size: 14px; }
+  header { background: #1a1a2e; color: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header span { font-size: 12px; color: #aab; margin-left: auto; }
+  .app { display: grid; grid-template-columns: 240px 1fr; gap: 16px; padding: 16px; max-width: 1100px; margin: 0 auto; }
+  .panel { background: #fff; border: 1px solid #dde1ea; border-radius: 10px; padding: 14px; }
+  .section-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+  .sel-badge { background: #f0f2f5; border: 1px solid #dde1ea; border-radius: 6px; padding: 7px 10px; font-weight: 700; font-size: 13px; min-height: 32px; margin-bottom: 12px; }
+  .listbox { border: 1px solid #dde1ea; border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+  .listbox div { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f0f2f5; }
+  .listbox div:last-child { border-bottom: none; }
+  .listbox div:hover { background: #f0f2f5; }
+  .listbox div.selected { background: #1a1a2e; color: #fff; font-weight: 600; }
+  .btn { display: block; width: 100%; padding: 9px 12px; border-radius: 7px; border: 1px solid #dde1ea; background: #fff; color: #1a1a2e; font-size: 13px; cursor: pointer; margin-bottom: 7px; text-align: left; font-family: inherit; }
+  .btn:hover { background: #f0f2f5; }
+  .btn-play { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+  .btn-play:hover { background: #2d2d4e; }
+  .btn-pause { background: #444; color: #fff; border-color: #444; }
+  .btn-pause:hover { background: #222; }
+  .divider { height: 1px; background: #eee; margin: 12px 0; }
+  .modo-group { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .modo-group label { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 6px 10px; border-radius: 7px; border: 1px solid #dde1ea; }
+  .modo-group label:hover { background: #f0f2f5; }
+  .modo-group label.active { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+  .modo-group input[type=radio] { display: none; }
+  .cal-btns { display: flex; gap: 8px; margin-top: 4px; }
+  .btn-cal { flex: 1; padding: 8px; border-radius: 7px; border: none; background: #5a3000; color: #fff; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; }
+  .btn-cal:hover { background: #3a1e00; }
+  .btn-cal.playing { background: #b00020; }
+  .text-box { background: #f8f9fb; border: 1px solid #dde1ea; border-radius: 8px; padding: 16px; min-height: 160px; font-size: 16px; line-height: 2.2; white-space: pre-wrap; word-break: break-word; }
+  .kw { color: #c0392b; font-weight: 700; }
+  .resp-table { width: 100%; border-collapse: collapse; }
+  .resp-table td { padding: 3px 4px; }
+  .resp-table .lbl { font-size: 12px; color: #666; text-align: right; padding-right: 10px; white-space: nowrap; width: 80px; }
+  .resp-btn { width: 38px; height: 34px; border: 1px solid #bbb; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; color: #333; }
+  .resp-btn:hover { background: #e8e8e8; }
+  .resp-btn.active { background: #5F5E5A; color: #fff; border-color: #2C2C2A; }
+  .results-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .btn-calc { background: #1a7a1a; color: #fff; border: none; padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .btn-calc:hover { background: #145a14; }
+  .res-card { background: #f0f2f5; border-radius: 8px; padding: 8px 18px; min-width: 110px; }
+  .res-label { font-size: 11px; color: #888; margin-bottom: 2px; }
+  .res-val { font-size: 24px; font-weight: 700; color: #b00020; }
+  #status-msg { display: none; background: #e8f4fd; border: 1px solid #90caf9; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #1565c0; margin-top: 8px; }
+  #error-msg { display: none; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #856404; margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div>🎧</div>
+  <h1>RPS Quick Sin — Habla en Ruido</h1>
+  <span>Audiología clínica</span>
+</header>
+<div class="app">
+  <div style="display:flex;flex-direction:column;gap:12px;">
+    <div class="panel">
+      <div class="section-title">Lista seleccionada</div>
+      <div class="sel-badge" id="sel-badge">—</div>
+      <div class="section-title">Listas</div>
+      <div class="listbox" id="listbox"></div>
+      <button class="btn btn-play" onclick="reproducir()">▶  Reproducir</button>
+      <button class="btn btn-pause" onclick="pausaReanudar()">⏸  Pausa / Reanudar</button>
+      <div id="status-msg"></div>
+      <div id="error-msg"></div>
+    </div>
+    <div class="panel">
+      <div class="section-title">Modo</div>
+      <div class="modo-group">
+        <label class="active"><input type="radio" name="modo" value="Auriculares" checked> Auriculares</label>
+        <label><input type="radio" name="modo" value="Campo Libre"> Campo libre</label>
+        <label><input type="radio" name="modo" value="Campo Libre SNR=0dB"> Campo libre SNR=0dB</label>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="section-title">Tonos de calibración</div>
+      <div class="cal-btns">
+        <button class="btn-cal" id="btn-cal1" onclick="toggleCal(1)">CAL 1</button>
+        <button class="btn-cal" id="btn-cal2" onclick="toggleCal(2)">CAL 2</button>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px;">
+    <div class="panel">
+      <div class="section-title">Texto de la lista</div>
+      <div class="text-box" id="text-box">Seleccioná una lista para ver el texto.</div>
+    </div>
+    <div class="panel">
+      <div class="section-title">Respuestas por oración — cantidad de aciertos</div>
+      <table class="resp-table" id="resp-table"></table>
+      <div class="divider"></div>
+      <div class="results-row">
+        <button class="btn-calc" onclick="calcular()">Calcular puntaje</button>
+        <div class="res-card"><div class="res-label">SNR50 (dB)</div><div class="res-val" id="res1">—</div></div>
+        <div class="res-card"><div class="res-label">SNRL (dB)</div><div class="res-val" id="res2">—</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<audio id="audio-player"></audio>
+<audio id="cal-player"></audio>
+<script>
+const BASE = 'https://archive.org/download/20260506_20260506_2344/';
+
+// Prefijos segun el modo
+const PREFIJOS = {
+  "Auriculares":         "LISTA ",
+  "Campo Libre":         "CSLISTA ",
+  "Campo Libre SNR=0dB": "PDLISTA "
+};
+
+const CAL1 = BASE + 'Tono%20de%20Calibracion1_R19.wav';
+const CAL2 = BASE + 'Tono%20de%20Calibracion2_R19.wav';
+
+function urlAudio(modo, num) {
+  return BASE + encodeURIComponent(PREFIJOS[modo] + num + ' REV 19.wav');
+}
+
+const LISTAS = {
+  "LISTA 1": [["Mandó",1],[" la ",0],["postal ",1],["en un ",0],["sobre",1],[" de ",0],["papel grueso",1],[".\n",0],["La ",0],["sala blanca está llena",1],[" de ",0],["gente",1],[".\n",0],["El ",0],["jabón flota",1],[" en el ",0],["agua fría",1],[" de la ",0],["ducha",1],[".\n",0],["El ",0],["cauce",1],[" del ",0],["gran río",1],[" es ",0],["muy ancho",1],[".\n",0],["Se ",0],["puede",1],[" ver el ",0],["muelle desde",1],[" la ",0],["otra playa",1],[".\n",0],["Pidió otro libro",1],[" de ",0],["arte",1],[" en la ",0],["tienda",1],["."]],
+  "LISTA 2": [["El ",0],["río pasa",1],[" a ",0],["través",1],[" del ",0],["campo",1],[" de ",0],["trigo",1],[".\n",0],["Para tener fama",1],[" hay que ",0],["tener suerte",1],[".\n",0],["El ",0],["hombre alto logró",1],[" una ",0],["buena marca",1],[".\n",0],["Hay",1],[" un ",0],["montón",1],[" de ",0],["platos sucios",1],[" en la ",0],["mesa",1],[".\n",0],["Qué feliz",1],[" es el ",0],["niño",1],[" cuando ",0],["juega",1],[" en el ",0],["parque",1],[".\n",0],["La ",0],["playa",1],[" se ",0],["seca",1],[" si ",0],["baja mucho",1],[" el ",0],["agua",1],["."]],
+  "LISTA 3": [["Todos",1],[" los ",0],["niños",1],[" se ",0],["ríen",1],[" cuando ",0],["van",1],[" al ",0],["circo.\n",1],["La ",0],["brisa",1],[" ",0],["llegó",1],[" hasta el ",0],["otro",1],[" ",0],["lado",1],[" de la ",0],["costa",1],[".\n",0],["El ",0],["chico",1],[" ",0],["joven",1],[" es el ",0],["autor",1],[" del ",0],["libro",1],[" ",0],["nuevo",1],[".\n",0],["La ",0],["joven madre hizo",1],[" una ",0],["canción",1],[" para su ",0],["niño.\n",1],["Una ",0],["chispa quemó",1],[" el ",0],["mantel justo",1],[" en el ",0],["medio",1],[".\n",0],["Una ",0],["gota",1],[" de ",0],["leche cayó",1],[" por el ",0],["borde",1],[" de la ",0],["mesa",1],["."]],
+  "LISTA 4": [["El ",0],["pobre chico",1],[" ",0],["perdió ",1],["el ",0],["tren",1],[" de ",0],["nuevo",1],[".\n",0],["La",0],[" chica quiere ",1],["una",0],[" joya ",1],["de",0],[" oro blanco.\n",1],["Un ",0],["buen jabón deja",1],[" la ",0],["piel suave",1],[".\n",0],["Cubrió",1],[" la ",0],["mesa",1],[" con una ",0],["gran tela rosa",1],[".\n",0],["El ",0],["viejo reloj",1],[" de la ",0],["pared marca",1],[" las ",0],["once",1],[".\n",0],["Un ",0],["trapo seca",1],[" el ",0],["agua",1],[" que ",0],["hay",1],[" en la ",0],["mesa",1],["."]],
+  "LISTA 5": [["Los ",0],["ojos",1],[" de la ",0],["chica tienen",1],[" un ",0],["gran brillo",1],[".\n",0],["Tome",1],[" la ",0],["otra senda",1],[" para ",0],["llegar al lago",1],[".\n",0],["El ",0],["niño",1],[" fue a ",0],["jugar",1],[" a ",0],["casa",1],[" de su ",0],["primo",1],[".\n",0],["El ",0],["mago",1],[" ",0],["tiene",1],[" un ",0],["ratón dentro",1],[" de la ",0],["caja",1],[".\n",0],["La ",0],["madre batió",1],[" el ",0],["huevo",1],[" para ",0],["hacer ",1],["la ",0],["cena.\n",1],["Oyó un ",0],["coche",1],[" ",0],["llegar",1],[" a la ",0],["puerta",1],[" de ",0],["casa",1],["."]],
+  "LISTA 6": [["El ",0],["color gris está muy",1],[" de ",0],["moda",1],[".\n",0],["La ",0],["chica joven ",1],["se ",0],["quitó",1],[" el ",0],["gorro",1],[" de ",0],["lana",1],[".\n",0],["La ",0],["carne fría ",1],["es ",0],["apta",1],[" para ",0],["este menú",1],[".\n",0],["Vivió cinco años ",1],["con ",0],["aquel perro",1],[".\n",0],["Los ",0],["tacos",1],[" se ",0],["hunden fácil ",1],["en el ",0],["césped blando",1],[".\n",0],["El ",0],["plazo venció ",1],["el ",0],["primer día ",1],["de ",0],["mayo.",1]],
+  "LISTA 7": [["El ",0],["camión tuvo ",1],["que ",0],["parar",1],[" por la ",0],["fuerte lluvia",1],[".\n",0],["Los ",0],["niños toman sopa ",1],["de ",0],["pollo",1],[" por la ",0],["noche",1],[".\n",0],["El ",0],["reloj ",1],["de la ",0],["plaza marcó ",1],["las ",0],["cuatro",1],[" de la ",0],["tarde",1],[".\n",0],["La ",0],["blusa blanca está sucia ",1],["de ",0],["barro",1],[".\n",0],["No es ",0],["fácil tener ",1],["una ",0],["tierra fértil ",1],["sin ",0],["agua",1],[".\n",0],["Dejé",1],[" su ",0],["vaso dentro ",1],["de la ",0],["bolsa negra",1],["."]],
+  "LISTA 8": [["El ",0],["fruto",1],[" del ",0],["nogal",1],[" es de ",0],["color marrón claro",1],[".\n",0],["Llevó",1],[" a sus ",0],["dos hijos",1],[" a ",0],["jugar",1],[" al ",0],["parque",1],[".\n",0],["La ",0],["chica",1],[" era ",0],["buena",1],[" con ",0],["toda ",1],["la ",0],["gente",1],[" de la ",0],["tienda",1],[".\n",0],["Vino pronto",1],[" cuando ",0],["oyó sonar",1],[" el ",0],["timbre",1],[".\n",0],["Una ",0],["taza",1],[" de ",0],["leche",1],[" es ",0],["agua",1],[" en su ",0],["mayor parte",1],[".\n",0],["El ",0],["bebé",1],[" se ",0],["mete",1],[" el ",0],["pie dentro",1],[" de la ",0],["boca",1],["."]],
+};
+
+const ac = new Array(7).fill(0);
+let pausado=false, calState={1:false,2:false}, listaActual=null, modoActual="Auriculares";
+const audioPlayer=document.getElementById('audio-player');
+const calPlayer=document.getElementById('cal-player');
+
+Object.keys(LISTAS).forEach(nombre=>{
+  const d=document.createElement('div'); d.textContent=nombre;
+  d.onclick=()=>{
+    listaActual=nombre;
+    document.getElementById('sel-badge').textContent=nombre;
+    document.querySelectorAll('#listbox div').forEach(x=>x.classList.remove('selected'));
+    d.classList.add('selected');
+    const box=document.getElementById('text-box'); box.innerHTML='';
+    LISTAS[nombre].forEach(([txt,red])=>{
+      if(red){const s=document.createElement('span');s.className='kw';s.textContent=txt;box.appendChild(s);}
+      else box.appendChild(document.createTextNode(txt));
+    });
+    ocultarMensajes();
+  };
+  document.getElementById('listbox').appendChild(d);
+});
+
+document.querySelectorAll('.modo-group input[type=radio]').forEach(r=>{
+  r.addEventListener('change',()=>{
+    modoActual=r.value;
+    document.querySelectorAll('.modo-group label').forEach(l=>l.classList.remove('active'));
+    r.parentElement.classList.add('active');
+  });
+});
+
+const tabla=document.getElementById('resp-table');
+for(let g=1;g<=6;g++){
+  const tr=document.createElement('tr');
+  const tdl=document.createElement('td'); tdl.className='lbl'; tdl.textContent='Oración '+g+':'; tr.appendChild(tdl);
+  for(let o=0;o<=5;o++){
+    const td=document.createElement('td');
+    const btn=document.createElement('button');
+    btn.className='resp-btn'; btn.textContent=o; btn.id='rb-'+g+'-'+o;
+    btn.addEventListener('click',()=>{
+      for(let i=0;i<=5;i++) document.getElementById('rb-'+g+'-'+i).className='resp-btn'+(i===o?' active':'');
+      ac[g]=o;
+    });
+    td.appendChild(btn); tr.appendChild(td);
+  }
+  tabla.appendChild(tr);
+}
+
+function mostrarStatus(msg){const e=document.getElementById('status-msg');e.textContent=msg;e.style.display='block';document.getElementById('error-msg').style.display='none';}
+function mostrarError(msg){const e=document.getElementById('error-msg');e.textContent=msg;e.style.display='block';document.getElementById('status-msg').style.display='none';}
+function ocultarMensajes(){document.getElementById('status-msg').style.display='none';document.getElementById('error-msg').style.display='none';}
+
+function resetRespuestas(){
+  for(let g=1;g<=6;g++){
+    ac[g]=0;
+    for(let o=0;o<=5;o++) document.getElementById('rb-'+g+'-'+o).className='resp-btn';
+  }
+  document.getElementById('res1').textContent='—';
+  document.getElementById('res2').textContent='—';
+}
+
+function reproducir(){
+  if(!listaActual){mostrarError('Seleccioná una lista primero.');return;}
+  resetRespuestas();
+  const num=listaActual.replace('LISTA ','');
+  const url=urlAudio(modoActual, num);
+  mostrarStatus('Cargando audio...');
+  audioPlayer.src=url;
+  audioPlayer.play()
+    .then(()=>ocultarMensajes())
+    .catch(()=>mostrarError('No se pudo reproducir. Verificá la conexión a internet.'));
+  pausado=false;
+}
+
+function pausaReanudar(){
+  if(!audioPlayer.src)return;
+  if(!pausado){audioPlayer.pause();pausado=true;}
+  else{audioPlayer.play();pausado=false;}
+}
+
+function toggleCal(n){
+  const btn=document.getElementById('btn-cal'+n);
+  if(!calState[n]){
+    const url = n===1 ? CAL1 : CAL2;
+    mostrarStatus('Cargando tono de calibración...');
+    calPlayer.src=url;
+    calPlayer.play()
+      .then(()=>ocultarMensajes())
+      .catch(()=>mostrarError('No se pudo reproducir el tono de calibración.'));
+    calState[n]=true; btn.classList.add('playing'); btn.textContent='■ CAL '+n;
+  }else{
+    calPlayer.pause(); calPlayer.currentTime=0;
+    calState[n]=false; btn.classList.remove('playing'); btn.textContent='CAL '+n;
+    ocultarMensajes();
+  }
+}
+
+function calcular(){
+  let t=0; for(let g=1;g<=6;g++) t+=ac[g];
+  document.getElementById('res1').textContent=(19.5-t).toFixed(1);
+  document.getElementById('res2').textContent=(24.5-t).toFixed(1);
+}
+</script>
+</body>
+</html>
